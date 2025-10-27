@@ -27,7 +27,7 @@ public class UserInfoEntity {
     @Column(name = "EMAIL", length = 100)
     private String email;
 
-    @Column(name = "ROLE_CD", nullable = false, length = 20)
+    @Column(name = "ROLE_CD", length = 20)
     private String roleCd;
 
     @Column(name = "CREATED_AT")
