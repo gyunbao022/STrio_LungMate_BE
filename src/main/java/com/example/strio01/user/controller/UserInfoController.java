@@ -16,14 +16,18 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.example.strio01.config.auth.PrincipalDetails;
 import com.example.strio01.config.jwt.JwtTokenProvider;
+import com.example.strio01.user.controller.UserInfoController.ResetPasswordRequest;
 import com.example.strio01.user.dto.AuthInfo;
 import com.example.strio01.user.dto.UserInfoDTO;
 import com.example.strio01.user.entity.UserInfoEntity;
 import com.example.strio01.user.service.AuthService;
+import com.example.strio01.user.service.MailService;
+import com.example.strio01.user.service.PasswordResetService;
 import com.example.strio01.user.service.UserInfoService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -36,12 +40,17 @@ public class UserInfoController {
 
     @Autowired
     private AuthService authService;
+    @Autowired
+    private PasswordResetService passwordResetService;    
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
+    
+    @Autowired
+    private MailService mailService;       
 
     public UserInfoController() {}
 
@@ -169,4 +178,68 @@ public class UserInfoController {
                     .body(Map.of("error", "토큰 검증 실패", "message", e.getMessage()));
         }
     }
+    
+    // 아이디 찾기
+    @PostMapping("/member/findId")
+    public ResponseEntity<?> getUserId(@RequestBody UserInfoDTO dto) {
+        UserInfoDTO userDTO = userInfoService.getUserId(dto);
+
+        if (userDTO == null) {
+            Map<String, Object> errorBody = new HashMap<>();
+            errorBody.put("message", "입력하신 이름과 이메일로 일치하는 회원이 없습니다.");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorBody);
+        }
+
+        return ResponseEntity.ok(userDTO);
+    }   
+
+    // 비밀번호 수정링크
+    @PostMapping("/member/findPasswd")
+    public ResponseEntity<?> getPasswd(@RequestBody UserInfoDTO dto) {
+        UserInfoDTO userDTO = userInfoService.getUserInfo(dto);
+
+        if (userDTO == null) {
+            Map<String, Object> errorBody = new HashMap<>();
+            errorBody.put("message", "입력하신 아이디와 이메일로 일치하는 회원이 없습니다.");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorBody);
+        }
+
+        // 비밀번호 재설정 링크 생성
+        //String resetToken = java.util.UUID.randomUUID().toString();
+        //String resetLink = "http://localhost:3000/reset-password?token=" + resetToken + "&userId=" + userDTO.getUserId();
+        String token = passwordResetService.createResetToken(userDTO.getUserId());
+        String resetLink = "http://localhost:3000/reset-password?token=" + token;
+
+        // 메일 전송   
+        mailService.sendPasswordResetMail(userDTO.getEmail(), resetLink);
+
+        Map<String, Object> successBody = new HashMap<>();
+        successBody.put("message", "비밀번호 재설정 링크가 이메일로 발송되었습니다.");
+        successBody.put("resetLink", resetLink); // 디버깅용 (실제 서비스에서는 제거)
+        return ResponseEntity.ok(successBody);
+    }  
+    
+    @Data
+    public static class ResetPasswordRequest {
+        private String token;
+        private String newPassword;
+
+        public String getToken() { return token; }
+        public void setToken(String token) { this.token = token; }
+
+        public String getNewPassword() { return newPassword; }
+        public void setNewPassword(String newPassword) { this.newPassword = newPassword; }
+    }
+    
+    @PostMapping("/member/resetPasswd")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest req) {
+        try {
+            passwordResetService.resetPassword(req.getToken(), req.getNewPassword());
+            return ResponseEntity.ok(Map.of("message", "비밀번호가 변경되었습니다."));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }  
+    
 }
