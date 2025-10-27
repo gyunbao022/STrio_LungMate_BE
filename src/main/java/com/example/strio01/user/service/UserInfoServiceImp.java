@@ -45,6 +45,24 @@ public class UserInfoServiceImp implements UserInfoService {
                 .map(UserInfoDTO::toDTO)
                 .orElse(null);
     }
+    
+    // 아이디 찾기
+    @Transactional
+    @Override
+    public UserInfoDTO getUserId(UserInfoDTO dto) {
+        return userInfoRepository.findByUserNameAndEmail(dto.getUserName(),dto.getEmail())
+                .map(UserInfoDTO::toDTO)
+                .orElse(null);
+    }    
+    
+    // 비밀번호 찾기를 위한 회원정보 확인
+    @Transactional
+    @Override
+    public UserInfoDTO getUserInfo(UserInfoDTO dto) {
+        return userInfoRepository.findByUserIdAndEmail(dto.getUserId(),dto.getEmail())
+                .map(UserInfoDTO::toDTO)
+                .orElse(null);
+    }         
 
     // ✅ 회원가입 처리
     @Transactional

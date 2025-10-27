@@ -1,5 +1,7 @@
 package com.example.strio01.user.repository;
 
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -15,4 +17,10 @@ public interface UserInfoRepository extends JpaRepository<UserInfoEntity, String
     // 사용자 수 카운트
     @Query("SELECT COUNT(u) FROM UserInfoEntity u")
     long countUsers();
+    
+    // 로그인용 (ID로 사용자 조회)
+    Optional<UserInfoEntity> findByUserNameAndEmail(String userName, String email);
+    
+    // 로그인용 (ID로 사용자 조회)
+    Optional<UserInfoEntity> findByUserIdAndEmail(String userId, String email);       
 }

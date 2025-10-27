@@ -14,6 +14,8 @@ public interface UserInfoService {
 
     // 단일 사용자 조회
     UserInfoDTO getUser(String userId);
+    UserInfoDTO getUserId(UserInfoDTO dto);
+    UserInfoDTO getUserInfo(UserInfoDTO dto);    
 
     // 회원가입 (비밀번호 암호화)
     AuthInfo createUserProcess(UserInfoDTO dto);
