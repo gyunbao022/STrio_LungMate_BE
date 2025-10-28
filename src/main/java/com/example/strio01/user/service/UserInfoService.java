@@ -38,4 +38,10 @@ public interface UserInfoService {
 
     // ✅ ID로 조회 (RefreshToken 검증 등에서 사용)
     Optional<UserInfoEntity> findById(String userId);
+    
+    // 역할별 사용자 조회
+    List<UserInfoDTO> findUsersByRole(String roleCd);
+
+    // 의사 검색 (ID 또는 이름으로)
+    List<UserInfoDTO> searchDoctors(String userId);
 }

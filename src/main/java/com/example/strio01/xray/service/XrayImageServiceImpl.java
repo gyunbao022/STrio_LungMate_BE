@@ -1,7 +1,7 @@
 package com.example.strio01.xray.service;
 
 import java.io.File;
-import java.sql.Date;
+import java.time.LocalDateTime;  // ⬅️ Date 대신 LocalDateTime
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -40,23 +40,48 @@ public class XrayImageServiceImpl implements XrayImageService {
     @Transactional
     @Override
     public void insertProcess(XrayImageDTO dto, String tempDir) {
-        long newId = repository.getNextVal();
-        dto.setXrayId(newId);
-        dto.setCreatedAt(new Date(System.currentTimeMillis()));
 
+//        long newId = repository.getNextVal(); 2510528
+//        dto.setXrayId(newId); 251028
+    	
+        // ⬅️ Date 대신 LocalDateTime.now() 사용
+        dto.setCreatedAt(LocalDateTime.now());
+
+        XrayImageEntity entity = dto.toEntity();
+        entity.setXrayId(null);
+        
+        entity.setFilePath("temp");
+        entity.setFileName("temp");
+        
+        if (entity.getFileSize()==null) {
+        	entity.setFileSize(0L);
+        }
+        
+        XrayImageEntity savedEntity = repository.save(entity);
+        
         // 파일 업로드 처리
         if (dto.getFile() != null && !dto.getFile().isEmpty()) {
             try {
-                String filename = newId + "_" + dto.getFile().getOriginalFilename();
+//                String filename = newId + "_" + dto.getFile().getOriginalFilename();
+            		  String filename = savedEntity.getXrayId() + "_" + dto.getFile().getOriginalFilename();
                 File dest = new File(tempDir, filename);
                 dto.getFile().transferTo(dest);
-                dto.setFilePath(dest.getAbsolutePath());
+//                dto.setFilePath(dest.getAbsolutePath());
+                
+                // ⬅️ 파일명과 크기 저장 (업로드 내역용)
+//                dto.setFileName(filename);
+//                dto.setFileSize(dto.getFile().getSize());
+                savedEntity.setFilePath(dest.getAbsolutePath());
+                savedEntity.setFileName(filename);
+                savedEntity.setFileSize(dto.getFile().getSize());
+                
+                repository.save(savedEntity);
             } catch (Exception e) {
                 log.error("File upload failed", e);
             }
         }
 
-        repository.save(dto.toEntity());
+//        repository.save(dto.toEntity());
     }
 
     @Transactional
@@ -69,7 +94,8 @@ public class XrayImageServiceImpl implements XrayImageService {
     @Transactional
     @Override
     public void updateStatusProcess(XrayImageDTO dto) {
-        dto.setUpdatedAt(new Date(System.currentTimeMillis()));
+        // ⬅️ Date 대신 LocalDateTime.now() 사용
+        dto.setUpdatedAt(LocalDateTime.now());
         repository.updateStatus(dto.toEntity());
     }
 
@@ -79,7 +105,14 @@ public class XrayImageServiceImpl implements XrayImageService {
         XrayImageEntity entity = repository.findByXrayId(xrayId);
         if (entity != null && entity.getFilePath() != null) {
             File file = new File(entity.getFilePath());
-            if (file.exists()) file.delete();
+            if (file.exists()) {
+                boolean deleted = file.delete();
+                if (deleted) {
+                    log.info("파일 삭제 완료: {}", entity.getFilePath());
+                } else {
+                    log.warn("파일 삭제 실패: {}", entity.getFilePath());
+                }
+            }
         }
         repository.deleteById(xrayId);
     }

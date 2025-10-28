@@ -208,4 +208,21 @@ public class UserInfoServiceImp implements UserInfoService {
     public Optional<UserInfoEntity> findById(String userId) {
         return userInfoRepository.findById(userId);
     }
+
+    @Transactional
+    @Override
+    public List<UserInfoDTO> findUsersByRole(String roleCd) {
+        return userInfoRepository.findByRoleCd(roleCd).stream()
+            .map(UserInfoDTO::toDTO).collect(Collectors.toList());
+    }
+
+    @Transactional
+    @Override
+    public List<UserInfoDTO> searchDoctors(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return findUsersByRole("D");
+        }
+        return userInfoRepository.searchByRoleAndKeyword("D", query.trim()).stream()
+            .map(UserInfoDTO::toDTO).collect(Collectors.toList());
+    }
 }

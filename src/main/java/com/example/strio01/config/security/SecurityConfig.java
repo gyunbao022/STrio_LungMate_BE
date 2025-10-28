@@ -93,13 +93,18 @@ public class SecurityConfig {
 		// [5] 요청에 의한 권한 설정검사 시작
 		
 		http.authorizeHttpRequests(authorize -> authorize
-				// 특정 URL은 인증 없이 허용
-				// .requestMatchers("/api/v1/home", "/api/v1/join", "/api/v1/login").permitAll()
-			.requestMatchers("/","/images/**","/member/**","/member/list","/member/logout","/member/signup","/member/delete/**","/member/update","/member/updatePasswd","/notice/list/**","/notice/view/**","/board/list/**","/board/view/**","/board/contentdownload/**","/auth/refresh").permitAll()
-				// 그외 모든 요청에 대해서 인증(로그인)이 되어야 한다.
-			 .requestMatchers("/notice/write", "/notice/update", "/notice/delete/**","/xray/upload").hasRole("ADMIN")
-			.anyRequest().authenticated());
-
+		        
+		        .requestMatchers("/", "/images/**", "/auth/refresh").permitAll()
+		        .requestMatchers("/member/**").permitAll() 
+		        .requestMatchers("/notice/list/**", "/notice/view/**").permitAll()
+		        .requestMatchers("/board/list/**", "/board/view/**", "/board/contentdownload/**").permitAll()
+		        .requestMatchers("/xray/upload").hasAnyRole("ADMIN", "XRAY_OPERATOR")
+		        .requestMatchers("/members/doctors", "/members/doctors/search").hasAnyRole("ADMIN", "XRAY_OPERATOR", "DOCTOR")
+		        .requestMatchers("/xray/history").hasAnyRole("ADMIN", "XRAY_OPERATOR", "DOCTOR")
+		        .requestMatchers("/xray/history/all").hasRole("ADMIN")
+		        .requestMatchers("/xray/{xrayId}").hasAnyRole("ADMIN", "XRAY_OPERATOR")
+		        .anyRequest().authenticated()
+		);
 		   
 		// addFilter() : FilterComparator에 등록되어 있는 Filter들을 활성화할 때 사용
 		// addFilterBefore(), addFilterAfter() : CustomFilter를 등록할 때 사용

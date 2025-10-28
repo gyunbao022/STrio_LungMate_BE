@@ -2,6 +2,8 @@ package com.example.strio01.user.controller;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -120,7 +122,7 @@ public class UserInfoController {
         }
     }
  
-
+    
     // 회원 삭제 (2025.10.21 완료)
     @DeleteMapping("/member/delete/{userId}")
     public ResponseEntity<Void> deleteUser(@PathVariable("userId") String userId) {
@@ -177,6 +179,62 @@ public class UserInfoController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "토큰 검증 실패", "message", e.getMessage()));
         }
+        
+    }
+    /**
+     * 의사(roleCd='D') 목록 조회
+     * - ADMIN 또는 XRAY_OPERATOR만 접근 가능
+     */
+    @GetMapping("/members/doctors")
+    @PreAuthorize("hasAnyRole('ADMIN','XRAY_OPERATOR')")
+    public ResponseEntity<List<Map<String, String>>> getDoctors() {
+        log.info("===> [의사 목록 조회 요청]");
+        
+        List<UserInfoDTO> doctors = userInfoService.findUsersByRole("D");
+        
+        // 간단한 응답 형태로 변환 (memberId, memberName만)
+        List<Map<String, String>> result = doctors.stream()
+            .map(dto -> {
+                Map<String, String> doctor = new HashMap<>();
+                doctor.put("memberId", dto.getUserId());
+                doctor.put("memberName", dto.getUserName());
+                return doctor;
+            })
+            .collect(Collectors.toList());
+        
+        log.info("===> [의사 목록 조회 완료] count={}", result.size());
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 의사 검색 (선택적 - 이름/ID 부분일치)
+     */
+    @GetMapping("/members/doctors/search")
+    @PreAuthorize("hasAnyRole('ADMIN','XRAY_OPERATOR')")
+    public ResponseEntity<List<Map<String, String>>> searchDoctors(
+            @RequestParam(required = false, defaultValue = "") String q) {
+        log.info("===> [의사 검색 요청] query={}", q);
+        
+        List<UserInfoDTO> doctors;
+        if (q == null || q.trim().isEmpty()) {
+            // 빈 검색어면 전체 의사 목록 반환
+            doctors = userInfoService.findUsersByRole("D");
+        } else {
+            // 검색어가 있으면 필터링
+            doctors = userInfoService.searchDoctors(q);
+        }
+        
+        List<Map<String, String>> result = doctors.stream()
+            .map(dto -> {
+                Map<String, String> doctor = new HashMap<>();
+                doctor.put("memberId", dto.getUserId());
+                doctor.put("memberName", dto.getUserName());
+                return doctor;
+            })
+            .collect(Collectors.toList());
+        
+        log.info("===> [의사 검색 완료] query={}, count={}", q, result.size());
+        return ResponseEntity.ok(result);
     }
     
     // 아이디 찾기
