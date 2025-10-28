@@ -14,7 +14,12 @@ import org.springframework.data.repository.query.Param; // ✅ 추가
 
 @Repository
 public interface UserInfoRepository extends JpaRepository<UserInfoEntity, String> {
-
+    // 로그인용 (ID로 사용자 조회)
+    Optional<UserInfoEntity> findByUserNameAndEmail(String userName, String email);
+    
+    // 로그인용 (ID로 사용자 조회)
+    Optional<UserInfoEntity> findByUserIdAndEmail(String userId, String email);       
+    
     @Query("SELECT u FROM UserInfoEntity u WHERE u.userId = :userId")
     UserInfoEntity findByUserId(@Param("userId") String userId);
     
