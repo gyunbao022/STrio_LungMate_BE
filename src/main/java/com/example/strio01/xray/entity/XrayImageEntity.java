@@ -52,6 +52,15 @@ public class XrayImageEntity {
     private LocalDateTime updatedAt;
     
     
+    // JPA 저장 전 자동 호출 - 기본값 설정
+    @PrePersist
+    public void prePersist() {
+        if (this.statusCd == null) {
+            this.statusCd = "P";  // 기본 상태를 PENDING('P')으로 설정
+        }
+    }
+    
+    
     // 호환성 메서드
     public LocalDateTime getUploadDate() { 
         return createdAt; 
