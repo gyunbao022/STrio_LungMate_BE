@@ -10,10 +10,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.*;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.example.strio01.board.dto.PageDTO;
+import com.example.strio01.config.auth.PrincipalDetails;
 import com.example.strio01.xray.dto.XrayImageDTO;
 import com.example.strio01.xray.service.XrayImageService;
 
@@ -22,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RestController
 @RequestMapping("/xray")
+@CrossOrigin(origins = "*")
 public class XrayImageController {
 
     @Autowired
@@ -43,10 +45,19 @@ public class XrayImageController {
         }
         return ResponseEntity.ok(map);
     }
-
+    
     @PostMapping("/upload")
-    @PreAuthorize("hasAnyRole('ADMIN','XRAY')")
-    public ResponseEntity<String> upload(XrayImageDTO dto) {
+    @PreAuthorize("hasAnyRole('ADMIN','XRAY_OPERATOR')")
+    public ResponseEntity<String> upload(
+            XrayImageDTO dto,
+            @AuthenticationPrincipal PrincipalDetails principal) {
+        
+        String uploaderId = principal.getUsername();
+        dto.setUploaderId(uploaderId);
+        
+        log.info("===> [X-ray 업로드] uploaderId={}, patientId={}, doctorId={}", 
+                uploaderId, dto.getPatientId(), dto.getDoctorId());
+        
         service.insertProcess(dto, tempDir);
         return ResponseEntity.ok("1");
     }
@@ -60,13 +71,6 @@ public class XrayImageController {
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR')")
     public ResponseEntity<Void> updateStatus(@RequestBody XrayImageDTO dto) {
         service.updateStatusProcess(dto);
-        return ResponseEntity.ok().build();
-    }
-
-    @DeleteMapping("/delete/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','XRAY')")
-    public ResponseEntity<Void> delete(@PathVariable("id") Long id) {
-        service.deleteProcess(id, tempDir);
         return ResponseEntity.ok().build();
     }
 

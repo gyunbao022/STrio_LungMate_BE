@@ -55,6 +55,7 @@ public class JwtAuthorizationFilter extends BasicAuthenticationFilter {
             chain.doFilter(request, response);
             return;
         }
+        
 
         System.out.println("==============================::7:::3");
         // 3. JWT 토큰을 검증해서 정상적인 사용자인지, 권한이 맞는지 확인
@@ -147,7 +148,7 @@ public class JwtAuthorizationFilter extends BasicAuthenticationFilter {
         return switch (roleCd) {
             case "A" -> "ROLE_ADMIN";
             case "D" -> "ROLE_DOCTOR";
-            case "X" -> "ROLE_XRAY";
+            case "X" -> "ROLE_XRAY_OPERATOR";
             default -> "ROLE_USER";
         };
     }
