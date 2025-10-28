@@ -15,7 +15,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 public class UploadHistoryDTO {
     
     private String xrayId;
-    private String patientId;
+    private Long patientId;
     private String uploaderId;
     private String uploaderName;
     private String doctorId;

@@ -23,7 +23,7 @@ public class XrayImageEntity {
     private Long xrayId;
     
     @Column(name = "PATIENT_ID")
-    private String patientId;
+    private Long patientId;
     
     @Column(name = "DOCTOR_ID")
     private String doctorId;

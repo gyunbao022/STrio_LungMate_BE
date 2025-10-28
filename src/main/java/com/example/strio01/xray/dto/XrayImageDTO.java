@@ -15,7 +15,7 @@ import lombok.*;
 public class XrayImageDTO {
 
     private Long xrayId;
-    private String patientId;
+    private Long patientId;
     private String doctorId;
     private String uploaderId;
     private String filePath;
