@@ -266,7 +266,7 @@ public class UserInfoController {
         //String resetToken = java.util.UUID.randomUUID().toString();
         //String resetLink = "http://localhost:3000/reset-password?token=" + resetToken + "&userId=" + userDTO.getUserId();
         String token = passwordResetService.createResetToken(userDTO.getUserId());
-        String resetLink = "http://localhost:3000/reset-password?token=" + token;
+        String resetLink = "http://strio.cloud:3000/reset-password?token=" + token;
 
         // 메일 전송   
         mailService.sendPasswordResetMail(userDTO.getEmail(), resetLink);

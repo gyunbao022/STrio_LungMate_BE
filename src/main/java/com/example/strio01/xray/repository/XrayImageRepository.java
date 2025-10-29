@@ -115,4 +115,24 @@ public interface XrayImageRepository extends JpaRepository<XrayImageEntity, Long
     long countByUploaderIdAndStatus(
             @Param("uploaderId") String uploaderId, 
             @Param("status") String status);
+    
+    /**
+     * 사용자별 조회
+     * @param uploaderId
+     * @param pv
+     * @return
+     */
+    @Query(value = """
+            SELECT b.* FROM (
+                SELECT rownum AS rm, a.* 
+                FROM (SELECT * FROM XRAY_IMAGE WHERE UPLOADER_ID = :uploaderId ORDER BY XRAY_ID DESC) a
+            ) b
+            WHERE b.rm >= :#{#pv.startRow} AND b.rm <= :#{#pv.endRow}
+            """, nativeQuery = true)
+    List<XrayImageEntity> findPagedByUploaderId(@Param("uploaderId") String uploaderId,
+                                                @Param("pv") PageDTO pv);
+
+    @Query(value = "SELECT COUNT(*) FROM XRAY_IMAGE WHERE UPLOADER_ID = :uploaderId", nativeQuery = true)
+    long countByUploaderId(@Param("uploaderId") String uploaderId);
+    
 }
