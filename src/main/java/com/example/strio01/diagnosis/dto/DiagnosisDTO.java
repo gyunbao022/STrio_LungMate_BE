@@ -23,6 +23,10 @@ public class DiagnosisDTO {
     private Date createdAt;
     private Date updatedAt;
 
+    // ✅ 프론트에서 필요로 하는 이미지 URL 필드 추가
+    private String originalUrl;   // 원본 X-ray 이미지 경로
+    private String overlayUrl;    // Grad-CAM 오버레이 이미지 경로
+
     // DTO → Entity
     public DiagnosisEntity toEntity() {
         return DiagnosisEntity.builder()
@@ -35,12 +39,13 @@ public class DiagnosisDTO {
                 .doctorImpression(doctorImpression)
                 .createdAt(createdAt)
                 .updatedAt(updatedAt)
+                // ✅ Entity에는 저장 안 해도 됨 (DB에 칼럼이 없을 수 있음)
                 .build();
     }
 
     // Entity → DTO
     public static DiagnosisDTO toDTO(DiagnosisEntity entity) {
-        return DiagnosisDTO.builder()
+        DiagnosisDTO dto = DiagnosisDTO.builder()
                 .diagId(entity.getDiagId())
                 .xrayId(entity.getXrayId())
                 .doctorId(entity.getDoctorId())
@@ -51,5 +56,10 @@ public class DiagnosisDTO {
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();
+
+        // ✅ 여기서 실제 URL을 설정 (컨트롤러/서비스에서 set 가능)
+        // 예: dto.setOriginalUrl("/images/xray/xxx.png");
+        //     dto.setOverlayUrl("/images/cam/xxx_cam.png");
+        return dto;
     }
 }
