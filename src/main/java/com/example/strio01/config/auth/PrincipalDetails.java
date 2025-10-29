@@ -29,17 +29,20 @@ public class PrincipalDetails implements UserDetails{
 
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
-		Collection<GrantedAuthority> collect = new ArrayList<GrantedAuthority>();
-		//기본 권한 추가 (USER)
-		collect.add(() -> "ROLE_USER");
-		
-		//추가 권한(ADMIN일 경우만)  //// old 
-//		if(authInfo.getAuthRole().toString().equals("ADMIN")) {
-//			collect.add(() -> "ROLE_ADMIN");
-//		}
-
-		return collect;
+	    Collection<GrantedAuthority> collect = new ArrayList<>();
+	    // 기본 USER
+	    collect.add(() -> "ROLE_USER");
+	    // 🔴 DB의 역할 코드 반영 (예: "ADMIN" 이면 ROLE_ADMIN 부여)
+	    if (authInfo != null && authInfo.getRoleCd() != null) {
+	        String role = authInfo.getRoleCd().trim().toUpperCase();
+	        if (role.equals("ADMIN") || role.equals("ROLE_ADMIN")) {
+	            collect.add(() -> "ROLE_ADMIN");
+	        }
+	    }
+	    return collect;
 	}
+
+	
 
 	@Override
 	public String getPassword() {		

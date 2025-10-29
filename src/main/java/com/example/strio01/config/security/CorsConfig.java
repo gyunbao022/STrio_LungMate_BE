@@ -1,15 +1,10 @@
 package com.example.strio01.config.security;
 
 import java.util.List;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.cors.*;
 
-
-//스프링 설정 
 @Configuration
 public class CorsConfig {
 	
@@ -19,6 +14,12 @@ public class CorsConfig {
 		
 		//클라이언트에서 쿠키/인증정보 포함 허용 (예: withCredentials: true 사용 시 필요) 
 		config.setAllowCredentials(true); 
+        config.setAllowedOrigins(List.of(
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+                "http://192.168.0.4:3000",
+                "http://strio.cloud:3000"
+        ));		
 	
 		//config.setAllowedOrigins(List.of("http://localhost:3000","http://127.0.0.1:3000","http://192.168.0.4:3000")); //프론트엔드 주소
 		config.setAllowedOriginPatterns(List.of("*"));
@@ -30,11 +31,12 @@ public class CorsConfig {
 		config.setAllowedHeaders(List.of("*")); //모든 요청 헤더 허용
 		
 		// ✅ 브라우저에서 읽을 수 있도록 노출할 헤더 추가
-        config.setExposedHeaders(List.of("Authorization", "Authorization-refresh"));
+        config.setExposedHeaders(List.of("Authorization", "Authorization-refresh","Content-Type"));
 		
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", config);  //모든 경로에 대해 적용		
 		return source;
+	
 	}
 } //end class
 
@@ -66,23 +68,41 @@ public class CorsConfig {
 /////////////////////////////////////////////////////
 
 
+/*
+    @Bean("customCorsSource")
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
 
+        // 개발환경: Origin 명시 (withCredentials 사용 시 와일드카드 금지 규칙 회피)
+        config.setAllowCredentials(true);
+        config.setAllowedOrigins(List.of(
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:3001",
+            "http://192.168.0.4:3000"
+        ));
 
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of(
+            "Authorization",
+            "Authorization-refresh",
+            "Content-Type",
+            "X-Requested-With",
+            "Accept",
+            "Origin",
+            "Access-Control-Request-Method",
+            "Access-Control-Request-Headers"
+        ));
+        config.setExposedHeaders(List.of(
+            "Authorization",
+            "Authorization-refresh",
+            "Content-Type"
+        ));
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        // 전 경로 적용
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+    
+}*/

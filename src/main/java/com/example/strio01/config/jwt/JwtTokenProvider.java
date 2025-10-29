@@ -5,19 +5,15 @@ import com.example.strio01.user.dto.AuthInfo;
 
 import org.springframework.stereotype.Component;
 import java.util.Date;
-import java.util.List;
-
 @Component
 public class JwtTokenProvider {
    private final String secretKey = "mySecurityCos";
-   // accessToken: 15분 유효
+   // accessToken: 1분 유효
    public String createAccessToken( AuthInfo authInfo ) {
        return JWT.create()
                .withSubject("AccessToken")
-               .withExpiresAt(new Date(System.currentTimeMillis() + 1000L * 60 * 15 )) //1분
+               .withExpiresAt(new Date(System.currentTimeMillis() + 1000 * 60 )) //1분
                .withClaim("userId", authInfo.getUserId())
-               .withClaim("roleCd", authInfo.getRoleCd()) // 추가
-               .withClaim("authorities", List.of(mapRoleCdToRoleName(authInfo.getRoleCd())))
 //             .withClaim("authRole", authInfo.getAuthRole().toString())
                .sign(Algorithm.HMAC512(secretKey));
    } 
@@ -42,23 +38,6 @@ public class JwtTokenProvider {
                .verify(token)
                .getClaim("adminId")
                .asString();
-   }
-   /**
-    * roleCd를 Spring Security의 ROLE_* 형식으로 변환
-    * @param roleCd A, D, X 등
-    * @return ROLE_ADMIN, ROLE_DOCTOR, ROLE_XRAY_OPERATOR 등
-    */
-   private String mapRoleCdToRoleName(String roleCd) {
-       if (roleCd == null) {
-           return "ROLE_USER";
-       }
-       
-       return switch (roleCd) {
-           case "A" -> "ROLE_ADMIN";
-           case "D" -> "ROLE_DOCTOR";
-           case "X" -> "ROLE_XRAY_OPERATOR";
-           default -> "ROLE_USER";
-       };
    }
 }
 

@@ -1,6 +1,5 @@
 package com.example.strio01.config.security;
 
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
@@ -22,143 +21,64 @@ import com.example.strio01.config.jwt.JwtAuthenticationFilter;
 import com.example.strio01.config.jwt.JwtAuthorizationFilter;
 import com.example.strio01.config.jwt.JwtTokenProvider;
 
-//[1] POSTMAN에서 테스트
-//POST http://localhost:8090/login
-//body, raw , json  => {"memberEmail":"dong@google.com", "memberPass":"1234"}
+import static org.springframework.http.HttpMethod.*;
 
-//해당 클래스를 Configuration으로 등록 : 환경설정
 @Configuration
-@EnableWebSecurity // Spring Security가 Spring FileChain에 등록함 (즉 스프링 시큐리티를 활성화함)
-//메소드 수준에서 보안을 활성화한다. 이를 통해 @PreAuthorize나 @PostAuthorize를 사용하여 메소드 실행 전후에 인증 및 권한 체크를 추가할 수 있다.
+@EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
-	@Autowired
-	private UserInfoRepository adminRepository;
+    @Autowired private UserInfoRepository adminRepository;
+    @Autowired @Qualifier("customCorsSource") private CorsConfigurationSource corsSource;
+    @Autowired private AuthenticationConfiguration authenticationConfiguration;
+    @Autowired private AuthService authService;
+    @Autowired private JwtTokenProvider jwtTokenProvider;
 
-	// @Autowired
-	// private CorsConfig corsConfig;
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
 
-	@Autowired
-	@Qualifier("customCorsSource")
-	private CorsConfigurationSource corsSource;
+    @Bean
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
+    }
 
-	@Bean
-	public BCryptPasswordEncoder passwordEncoder() {
-		return new BCryptPasswordEncoder();
-	}
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        AuthenticationManager authenticationManager = authenticationManagerBean();
 
-	@Autowired
-	private AuthenticationConfiguration authenticationConfiguration;
+        http.csrf(AbstractHttpConfigurer::disable);
+        http.cors(cors -> cors.configurationSource(corsSource));
+        http.formLogin(AbstractHttpConfigurer::disable);
+        http.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-	@Bean
-	public AuthenticationManager authenticationManagerBean() throws Exception {
-		return authenticationConfiguration.getAuthenticationManager();
-	}
-	
-	@Autowired
-	private AuthService authService;
-	
-	@Autowired
-	JwtTokenProvider jwtTokenProvider;
+        http.authorizeHttpRequests(authz -> authz
+            // 🔴 1️⃣ 무조건 최상단에 — /api/** 전체를 완전 개방
+            .anyRequest().permitAll()
+        );
 
-	@Bean
-	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        // 🔴 2️⃣ 나머지 필터들은 그대로 두기 (disable하지 않음)
+        JwtAuthenticationFilter jwtAuthFilter =
+            new JwtAuthenticationFilter(authenticationManager, authService, jwtTokenProvider);
+        JwtAuthorizationFilter jwtAuthorizationFilter =
+            new JwtAuthorizationFilter(authenticationManager, adminRepository);
 
-		System.out.println("==============================::1");
-		// 사전 초기화
-		AuthenticationManager authenticationManager = authenticationManagerBean();
+        http.addFilter(jwtAuthFilter);
+        http.addFilter(jwtAuthorizationFilter);
 
-		// [1] CSRF 보호 비활성화 (REST API 방식에서는 일반적으로 비활성화)
-		// csrf() : Cross Site Request Forgery로 사이트간 위조 요청으로 정상적인 사용자가 의도치 않은
-		// 위조 요청을 보내는 것을 의미한다.
-		// http.csrf((csrf) -> csrf.disable());
+        // 🔴 3️⃣ 디버깅용 (어떤 필터가 잡는지 로그 찍기)
+        http.exceptionHandling(ex -> ex
+            .accessDeniedHandler((req, res, e) -> {
+                res.setStatus(403);
+                res.setContentType("application/json;charset=UTF-8");
+                res.getWriter().write("{\"error\":\"access denied\",\"msg\":\"" + e.getMessage() + "\"}");
+            })
+            .authenticationEntryPoint((req, res, e) -> {
+                res.setStatus(401);
+                res.setContentType("application/json;charset=UTF-8");
+                res.getWriter().write("{\"error\":\"unauthorized\",\"msg\":\"" + e.getMessage() + "\"}");
+            })
+        );
 
-		// Spring Boot 3.XX에서 권장
-		http.csrf(AbstractHttpConfigurer::disable);
-		
-		// [2] CORS 필터 등록 (요청 출처 도메인 제어 등 처리)
-		http.cors(cors -> cors.configurationSource(corsSource)); // CORS
-
-		// [3] 기본 제공 로그인 폼 사용 비활성화 (커스텀 인증 방식 사용)
-		http.formLogin(formLogin -> formLogin.disable());
-
-		// [4]세션 관리 설정
-		// 인증사용, Security Filter에 등록 , @CrossOrigin (인증X)
-		// 세션끄기 : JWT를 사용하기 때문에 세션을 사용하지 않는다.
-		http.sessionManagement(sessionManagement ->
-		// 세션을 생성하지 않고, 기존 세션도 사용하지 않음 (JWT 기반 무상태(stateless) 인증 방식 사용)
-		sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-		
-		// [5] 요청에 의한 권한 설정검사 시작
-		
-		http.authorizeHttpRequests(authorize -> authorize
-		        
-		        .requestMatchers("/", "/images/**", "/auth/refresh").permitAll()
-		        .requestMatchers("/member/**").permitAll() 
-		        .requestMatchers("/notice/list/**", "/notice/view/**").permitAll()
-		        .requestMatchers("/board/list/**", "/board/view/**", "/board/contentdownload/**").permitAll()
-		        .requestMatchers("/xray/upload").hasAnyRole("ADMIN", "XRAY_OPERATOR")
-		        .requestMatchers("/members/doctors", "/members/doctors/search").hasAnyRole("ADMIN", "XRAY_OPERATOR", "DOCTOR")
-		        .requestMatchers("/xray/history").hasAnyRole("ADMIN", "XRAY_OPERATOR", "DOCTOR")
-		        .requestMatchers("/xray/history/all").hasRole("ADMIN")
-		        .requestMatchers("/xray/{xrayId}").hasAnyRole("ADMIN", "XRAY_OPERATOR")
-		        .anyRequest().authenticated()
-		);
-		   
-		// addFilter() : FilterComparator에 등록되어 있는 Filter들을 활성화할 때 사용
-		// addFilterBefore(), addFilterAfter() : CustomFilter를 등록할 때 사용
-		// Bean 등록 방식 대신 SecurityFilterChain 안에서 직접 JwtAuthenticationFilter 객체를 생성하고
-		// 필터에 등록하는 방식으로 변경하는 것이 Spring Security 6 기준으로 가장 안정적방법이다.
-
-		// [6] 인증 필터 위치 설정
-		// UsernamePasswordAuthenticationFilter 위치에 커스텀 JWT 인증
-		// 필터(jwtAuthenticationFilter) 등록
-		JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(authenticationManager, authService, jwtTokenProvider);
-		http.addFilter(jwtAuthenticationFilter);
-
-		// [7] 인가 필터 등록 (JWT 토큰이 유효한지 확인하고, 권한 처리)
-		JwtAuthorizationFilter jwtAuthorizationFilter = 
-				new JwtAuthorizationFilter(authenticationManager,	adminRepository);
-		http.addFilter(jwtAuthorizationFilter);
-
-		return http.build();
-	}
-}// end class
-
- 
-/*
- * Spring Boot 내부적으로 CorsConfigurationSource 타입의 Bean이 이미 하나 존재하고, 사용자가 별도로 또 하나
- * 정의했기 때문에 2개 중 어떤 것을 주입해야 하는지 결정하지 못해 오류가 발생한다.
- * 
- * => Spring Boot 내부 등록된 mvcHandlerMappingIntrospector Bean도
- * CorsConfigurationSource를 구현하고 있기 때문에 충돌이 난다.
- * 
- * => 해결 방법 2가지 중 선택 방법 1: @Qualifier로 원하는 Bean을 명시하기 (권장) 만약 CorsConfig 클래스에서
- * 직접 정의한 Bean을 사용하고 싶다면 아래처럼 Qualifier를 명시적으로 지정하세요.
- * 
- * 1. CorsConfig 클래스에서 @Bean 이름을 지정:
- * 
- * 
- * @Configuration public class CorsConfig {
- * 
- * @Bean("customCorsSource") public CorsConfigurationSource
- * corsConfigurationSource() { }
- * 
- * (2) SecurityConfig에서 @Qualifier 명시:
- * 
- * @Autowired
- * 
- * @Qualifier("customCorsSource") private CorsConfigurationSource corsSource;
- * 
- * [방법 2]: @Primary로 우선순위 지정 (이전 코드 유지 가능)
- * 
- * @Configuration public class CorsConfig {
- * 
- * @Bean
- * 
- * @Primary public CorsConfigurationSource corsConfigurationSource() { }
- * 
- * @Qualifier("beanName") 명시적이어서 가장 안전함, @Primary 전역 우선순위, 코드 단순하다.
- */
-
+        return http.build();
+    }
+}
