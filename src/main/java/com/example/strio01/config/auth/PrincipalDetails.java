@@ -29,7 +29,7 @@ public class PrincipalDetails implements UserDetails{
 
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
-<<<<<<< Updated upstream
+/*
 	    Collection<GrantedAuthority> collect = new ArrayList<>();
 	    // 기본 USER
 	    collect.add(() -> "ROLE_USER");
@@ -41,7 +41,7 @@ public class PrincipalDetails implements UserDetails{
 	        }
 	    }
 	    return collect;
-=======
+*/
 		Collection<GrantedAuthority> collect = new ArrayList<GrantedAuthority>();
 		//기본 권한 추가 (USER)
 		//collect.add(() -> "ROLE_USER");
@@ -58,8 +58,6 @@ public class PrincipalDetails implements UserDetails{
 
 	    // DB 값 예시: roleCd = "A", "D", "X"
 	    String roleCd = authInfo.getRoleCd().trim().toUpperCase();
-	    System.out.println("======================================:::"); 	
-	    System.out.println("======================== roleCd:::"+roleCd);
 	    switch (roleCd) {
 	        case "A":
 	            collect.add(() -> "ROLE_ADMIN");
@@ -76,7 +74,6 @@ public class PrincipalDetails implements UserDetails{
 	    }		
 
 		return collect;
->>>>>>> Stashed changes
 	}
 
 	
