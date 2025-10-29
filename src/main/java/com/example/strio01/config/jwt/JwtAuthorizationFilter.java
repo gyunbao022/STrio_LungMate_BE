@@ -75,6 +75,26 @@ public class JwtAuthorizationFilter extends BasicAuthenticationFilter {
                     response.getWriter().write("{\"error\":\"user not found\"}");
                     return;
                 }
+<<<<<<< Updated upstream
+=======
+                
+                UserInfoEntity adminEntity = optMembersEntity.get();
+                log.info("************{}", adminEntity.getUserId());
+                
+                // roleCd를 ROLE_* 형태로 변환하여 권한 생성
+                String roleCd = adminEntity.getRoleCd();
+                String roleName = mapRoleCdToRoleName(roleCd);
+                
+                log.info("사용자 권한: roleCd={}, roleName={}", roleCd, roleName);
+                
+                // GrantedAuthority 리스트 생성
+                List<GrantedAuthority> authorities = new ArrayList<>();
+                authorities.add(new SimpleGrantedAuthority(roleName));
+                
+                AuthInfo authInfo = new AuthInfo(adminEntity.getUserId(), adminEntity.getPasswd(), adminEntity.getUserName());
+                authInfo.setRoleCd(adminEntity.getRoleCd()); 
+                PrincipalDetails principalDetails = new PrincipalDetails(authInfo);
+>>>>>>> Stashed changes
 
                 UserInfoEntity entity = opt.get();
                 String role = mapRoleCd(entity.getRoleCd());

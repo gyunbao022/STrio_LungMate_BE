@@ -29,6 +29,7 @@ public class PrincipalDetails implements UserDetails{
 
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
+<<<<<<< Updated upstream
 	    Collection<GrantedAuthority> collect = new ArrayList<>();
 	    // 기본 USER
 	    collect.add(() -> "ROLE_USER");
@@ -40,6 +41,42 @@ public class PrincipalDetails implements UserDetails{
 	        }
 	    }
 	    return collect;
+=======
+		Collection<GrantedAuthority> collect = new ArrayList<GrantedAuthority>();
+		//기본 권한 추가 (USER)
+		//collect.add(() -> "ROLE_USER");
+		
+		//추가 권한(ADMIN일 경우만)  //// old 
+//		if(authInfo.getAuthRole().toString().equals("ADMIN")) {
+//			collect.add(() -> "ROLE_ADMIN");
+//		}
+		
+	    if (authInfo == null || authInfo.getRoleCd() == null) {
+	        collect.add(() -> "ROLE_USER");
+	        return collect;
+	    }
+
+	    // DB 값 예시: roleCd = "A", "D", "X"
+	    String roleCd = authInfo.getRoleCd().trim().toUpperCase();
+	    System.out.println("======================================:::"); 	
+	    System.out.println("======================== roleCd:::"+roleCd);
+	    switch (roleCd) {
+	        case "A":
+	            collect.add(() -> "ROLE_ADMIN");
+	            break;
+	        case "D":
+	            collect.add(() -> "ROLE_DOCTOR");
+	            break;
+	        case "X":
+	            collect.add(() -> "ROLE_XRAY_OPERATOR");
+	            break;
+	        default:
+	            collect.add(() -> "ROLE_USER");
+	            break;
+	    }		
+
+		return collect;
+>>>>>>> Stashed changes
 	}
 
 	
