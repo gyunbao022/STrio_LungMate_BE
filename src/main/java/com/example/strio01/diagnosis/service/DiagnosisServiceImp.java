@@ -202,7 +202,6 @@ public class DiagnosisServiceImp implements DiagnosisService {
         resp.put("originalUrl", originalUrl);
         resp.put("camLayer", camLayer);
         resp.put("threshold", usedTh);
-        resp.put("aiImpression", aiImpression); // ✅ 2025.10.30  (추가되어 프론트에 LLM 요약 전달)
 
         log.info("🩻 originalUrl -> {}", originalUrl);
         log.info("🎨 overlayUrl  -> {}", overlayUrl);
