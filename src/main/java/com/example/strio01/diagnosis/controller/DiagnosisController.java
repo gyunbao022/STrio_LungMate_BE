@@ -8,9 +8,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.strio01.board.dto.PageDTO;
+import com.example.strio01.config.auth.PrincipalDetails;
 import com.example.strio01.diagnosis.dto.DiagnosisDTO;
 import com.example.strio01.diagnosis.entity.DiagnosisEntity;
 import com.example.strio01.diagnosis.service.DiagnosisService;
@@ -32,7 +34,7 @@ public class DiagnosisController {
     @Value("${strio.static-root}")
     private String STATIC_ROOT;
 
-    @Value("${strio.images-url-prefix:/images/}")
+    @Value("${strio.images-url-prefix:}")
     private String URL_PREFIX;
 
     // ------------------- 리스트 -------------------
@@ -101,16 +103,22 @@ public class DiagnosisController {
         consumes = MediaType.APPLICATION_JSON_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<Map<String, Object>> analyzeById(@RequestBody AnalyzeReq req) {
+    public ResponseEntity<Map<String, Object>> analyzeById( @RequestBody AnalyzeReq req, @AuthenticationPrincipal PrincipalDetails principal) {
         Map<String, Object> error = new HashMap<>();
         if (req == null || req.getXrayId() == null) {
             error.put("error", "xrayId required");
             return ResponseEntity.badRequest().body(error);
         }
 
-        log.info("📡 Received analyze request for XrayId={}", req.getXrayId());
+        log.info("Received analyze request for XrayId={}", req.getXrayId());
+        
+        // 현재 로그인 사용자 ID 가져오기
+        String doctorId = "SYSTEM";
+        if (principal != null && principal.getAuthInfo() != null) {
+            doctorId = principal.getAuthInfo().getUserId();  // UserInfoEntity의 userId
+        }        
 
-        Map<String, Object> resp = service.analyzeByXrayId(req.getXrayId(), req.getThreshold());
+        Map<String, Object> resp = service.analyzeByXrayId(req.getXrayId(), req.getThreshold(), doctorId);
         if (resp == null || resp.isEmpty()) {
             error.put("error", "Python model server no response");
             return ResponseEntity.internalServerError().body(error);
@@ -139,8 +147,16 @@ public class DiagnosisController {
     )
     public ResponseEntity<Map<String, Object>> analyzeAlt(
             @PathVariable long xrayId,
-            @RequestParam(value = "threshold", required = false) Double th) {
-        Map<String, Object> resp = service.analyzeByXrayId(xrayId, th);
+            @RequestParam(value = "threshold", required = false) Double th,
+            @AuthenticationPrincipal PrincipalDetails principal) {
+    	
+        // 현재 로그인 사용자 ID 가져오기
+        String doctorId = "SYSTEM";
+        if (principal != null && principal.getAuthInfo() != null) {
+            doctorId = principal.getAuthInfo().getUserId();  // UserInfoEntity의 userId
+        } 
+        
+        Map<String, Object> resp = service.analyzeByXrayId(xrayId, th, doctorId);
         return ResponseEntity.ok(resp);
     }
 

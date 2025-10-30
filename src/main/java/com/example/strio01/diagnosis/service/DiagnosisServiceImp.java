@@ -45,7 +45,7 @@ public class DiagnosisServiceImp implements DiagnosisService {
     @Value("${strio.static-root:}")
     private String staticRoot; // 예: C:/web__ai
 
-    @Value("${strio.images-url-prefix:/images/}")
+    @Value("${strio.images-url-prefix:}")
     private String imagesUrlPrefix; // 예: /images/
 
     // LLM 요약용 절대 URL 변환 베이스
@@ -81,7 +81,7 @@ public class DiagnosisServiceImp implements DiagnosisService {
         return DiagnosisDTO.toDTO(repository.findByDiagId(diagId));
     }
 
-    // ✅ 컨트롤러가 기대하는 시그니처: 저장 후 엔티티 반환
+    // 컨트롤러가 기대하는 시그니처: 저장 후 엔티티 반환
     @Transactional
     @Override
     public DiagnosisEntity updateProcess(DiagnosisDTO dto) {
@@ -102,7 +102,31 @@ public class DiagnosisServiceImp implements DiagnosisService {
         if (dto.getDoctorId() != null)         target.setDoctorId(dto.getDoctorId());
 
         target.setUpdatedAt(new Date(System.currentTimeMillis()));
-        return repository.save(target);
+        //return repository.save(target);
+        DiagnosisEntity saved = repository.save(target);
+        
+        // ---- Xray 상태 업데이트 ----   2025.10.30  jaemin
+        try {
+            if (saved.getXrayId() != null) {
+                XrayImageEntity xray = xrayRepo.findById(saved.getXrayId()).orElse(null);
+                if (xray != null) {
+                    String result = saved.getDoctorResult();
+                    // 의사 진단결과가 "PENDING"이 아니면 완료 처리
+                    if (result != null && !"PENDING".equalsIgnoreCase(result)) {
+                        xray.setStatusCd("D");  // 완료(Done)
+                    } else {
+                        xray.setStatusCd("P");  // 아직 대기(Pending)
+                    }
+                    xray.setUpdatedAt(java.time.LocalDateTime.now());
+                    xrayRepo.save(xray);
+                    log.info("XrayImage 상태 갱신: xrayId={} → statusCd={}", xray.getXrayId(), xray.getStatusCd());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("XrayImage 상태 업데이트 실패: {}", e.getMessage());
+        }
+
+        return saved;        
     }
 
     @Transactional
@@ -120,7 +144,7 @@ public class DiagnosisServiceImp implements DiagnosisService {
     // ---------- 파이썬 호출 + CAM/원본 URL 표준화 + LLM 요약 ----------
     @Transactional
     @Override
-    public Map<String, Object> analyzeByXrayId(long xrayId, Double thresholdOpt) {
+    public Map<String, Object> analyzeByXrayId(long xrayId, Double thresholdOpt, String doctorId) {
         // 1) XRAY 파일 경로 확보(+실존 체크)
         XrayImageEntity img = xrayRepo.findById(xrayId).orElse(null);
         if (img == null || img.getFilePath() == null) {
@@ -128,9 +152,13 @@ public class DiagnosisServiceImp implements DiagnosisService {
         }
 
         // 웹/상대 경로도 파일시스템 절대경로로 변환
-        Path fsPath = toFsPath(img.getFilePath());
+        Path fsPath = toFsPath(img.getFileName());		// 2025.10.30 이미지 경로 변경 jaemin   getFilePath() => getFileName() 
         requireExists(fsPath, "X-ray 파일이 존재하지 않습니다");
-
+        
+        System.out.println("=======================================");
+        System.out.println("=============img.getFilePath():"+img.getFilePath());
+        System.out.println("=============fsPath:"+fsPath);
+        
         // 2) 파이썬 analyze 호출
         String boundary = "----StrioBoundary" + System.currentTimeMillis();
         byte[] body = buildMultipartBody(boundary, fsPath, thresholdOpt, xrayId);
@@ -160,7 +188,7 @@ public class DiagnosisServiceImp implements DiagnosisService {
 
         // 원본 URL 보완
         if (isBlank(originalUrl) && img.getFilePath() != null) {
-            originalUrl = toWebUrlFromFilePath(img.getFilePath());
+            originalUrl = toWebUrlFromFilePath(img.getFileName());	// 2025.10.30 이미지 경로 변경 jaemin   getFilePath() => getFileName()
         }
         // 오버레이 기본 경로
         if (isBlank(overlayUrl)) {
@@ -169,7 +197,7 @@ public class DiagnosisServiceImp implements DiagnosisService {
 
         // 3) LLM 요약 호출용: 절대 URL
         String absoluteOriginalUrl = toAbsoluteUrl(originalUrl);
-
+        System.out.println("========================= absoluteOriginalUrl:"+absoluteOriginalUrl);
         String aiImpression = null;
         try {
             aiImpression = callLlmSummarize(client, predLabel, predProb, absoluteOriginalUrl);
@@ -218,7 +246,8 @@ public class DiagnosisServiceImp implements DiagnosisService {
 
         String originalUrl = null;
         if (img != null && img.getFilePath() != null) {
-            originalUrl = toWebUrlFromFilePath(img.getFilePath());
+            //originalUrl = toWebUrlFromFilePath(img.getFilePath()); 
+            originalUrl = toWebUrlFromFilePath(img.getFileName());		// 2025.10.30 xray 이미지 경로 이슈 해결. jaemin
         }
         String overlayUrl = joinUrl(imagesUrlPrefix, "cam/" + xrayId + "_cam.png");
 
@@ -230,9 +259,18 @@ public class DiagnosisServiceImp implements DiagnosisService {
         resp.put("originalUrl", originalUrl);
         resp.put("camLayer", null);
         resp.put("threshold", null);
+        
+        // 추가: 프론트에서 필요로 하는 진단 정보
+        resp.put("doctorResult", e.getDoctorResult());
+        resp.put("doctorImpression", e.getDoctorImpression());
+        resp.put("aiImpression", e.getAiImpression());
+        resp.put("statusCd", 
+            (e.getDoctorResult() != null && !"PENDING".equalsIgnoreCase(e.getDoctorResult()))
+            ? "D" : "P"   // doctorResult가 확정되었으면 COMPLETED 처리
+        );        
 
-        log.info("🩻 [latestResultView] originalUrl -> {}", resp.get("originalUrl"));
-        log.info("🎨 [latestResultView] overlayUrl  -> {}", resp.get("overlayUrl"));
+        log.info("[latestResultView] originalUrl -> {}", resp.get("originalUrl"));
+        log.info("[latestResultView] overlayUrl  -> {}", resp.get("overlayUrl"));
         return resp;
     }
 
