@@ -116,4 +116,35 @@ public class XrayImageServiceImpl implements XrayImageService {
         }
         repository.deleteById(xrayId);
     }
+    
+    @Transactional
+    @Override
+    public long countByUploaderId(String uploaderId) {
+        return repository.countByUploaderId(uploaderId);
+    }
+    
+    @Transactional
+    @Override
+    public long countByDoctorId(String doctorId) {
+        return repository.countByDoctorId(doctorId);
+    }    
+
+    @Transactional
+    @Override
+    public List<XrayImageDTO> listByUploaderProcess(String uploaderId, PageDTO pv) {
+        return repository.findPagedByUploaderId(uploaderId, pv)
+                         .stream()
+                         .map(XrayImageDTO::toDTO)
+                         .collect(Collectors.toList());
+    }    
+    
+    @Transactional
+    @Override
+    public List<XrayImageDTO> listByDoctorProcess(String doctorId, PageDTO pv) {
+        return repository.findPagedByDoctorId(doctorId, pv)
+                         .stream()
+                         .map(XrayImageDTO::toDTO)
+                         .collect(Collectors.toList());
+    }  
+    
 }

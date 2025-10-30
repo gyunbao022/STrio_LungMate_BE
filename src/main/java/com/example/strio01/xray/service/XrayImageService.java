@@ -11,4 +11,8 @@ public interface XrayImageService {
     XrayImageDTO contentProcess(long xrayId);
     void updateStatusProcess(XrayImageDTO dto);
     void deleteProcess(long xrayId, String tempDir);
+    public long countByUploaderId(String uploaderId);
+    public long countByDoctorId(String uploaderId);
+    public List<XrayImageDTO> listByUploaderProcess(String uploaderId, PageDTO pv);
+    public List<XrayImageDTO> listByDoctorProcess(String doctorId, PageDTO pv);
 }

@@ -11,7 +11,7 @@ import lombok.Setter;
 public class PageDTO {
 	private Long currentPage; 		// 현재페이지
 	private Long totalCount; 		// 총 레코드수
-	private Long blockCount = 10L; 	// 한 페이지에 보여줄 레코드 수
+	private Long blockCount = 8L; 	// 한 페이지에 보여줄 레코드 수
 	private Long blockPage = 5L; 	// 한 블록에 보여줄 페이지 수
 	private Long totalPage; 		// 총 페이지수
 	private Long startRow; 			// 시작 레코드 번호

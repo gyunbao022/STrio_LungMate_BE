@@ -29,17 +29,54 @@ public class PrincipalDetails implements UserDetails{
 
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
+/*
+	    Collection<GrantedAuthority> collect = new ArrayList<>();
+	    // 기본 USER
+	    collect.add(() -> "ROLE_USER");
+	    // 🔴 DB의 역할 코드 반영 (예: "ADMIN" 이면 ROLE_ADMIN 부여)
+	    if (authInfo != null && authInfo.getRoleCd() != null) {
+	        String role = authInfo.getRoleCd().trim().toUpperCase();
+	        if (role.equals("ADMIN") || role.equals("ROLE_ADMIN")) {
+	            collect.add(() -> "ROLE_ADMIN");
+	        }
+	    }
+	    return collect;
+*/
 		Collection<GrantedAuthority> collect = new ArrayList<GrantedAuthority>();
 		//기본 권한 추가 (USER)
-		collect.add(() -> "ROLE_USER");
+		//collect.add(() -> "ROLE_USER");
 		
 		//추가 권한(ADMIN일 경우만)  //// old 
 //		if(authInfo.getAuthRole().toString().equals("ADMIN")) {
 //			collect.add(() -> "ROLE_ADMIN");
 //		}
+		
+	    if (authInfo == null || authInfo.getRoleCd() == null) {
+	        collect.add(() -> "ROLE_USER");
+	        return collect;
+	    }
+
+	    // DB 값 예시: roleCd = "A", "D", "X"
+	    String roleCd = authInfo.getRoleCd().trim().toUpperCase();
+	    switch (roleCd) {
+	        case "A":
+	            collect.add(() -> "ROLE_ADMIN");
+	            break;
+	        case "D":
+	            collect.add(() -> "ROLE_DOCTOR");
+	            break;
+	        case "X":
+	            collect.add(() -> "ROLE_XRAY_OPERATOR");
+	            break;
+	        default:
+	            collect.add(() -> "ROLE_USER");
+	            break;
+	    }		
 
 		return collect;
 	}
+
+	
 
 	@Override
 	public String getPassword() {		

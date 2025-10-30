@@ -35,17 +35,84 @@ public class XrayImageController {
     private PageDTO pdto;
 
     @GetMapping("/list/{page}")
-    public ResponseEntity<Map<String, Object>> list(@PathVariable("page") int page) {
-        long total = service.countProcess();
+    public ResponseEntity<Map<String, Object>> list(
+            @PathVariable("page") int page,
+            @AuthenticationPrincipal PrincipalDetails principal) {
+
+        String role = principal.getAuthorities().stream()
+                .map(a -> a.getAuthority().replace("ROLE_", "")) // ROLE_ADMIN → ADMIN
+                .findFirst()
+                .orElse("USER");
+        
+
+        String uploaderId = principal.getUsername();  // ✅ 로그인 사용자 ID (xray01)
+
+        log.info("✅ Xray list 요청: uploaderId={}, role={}", uploaderId, role);
+
         Map<String, Object> map = new HashMap<>();
-        if (total > 0) {
-            pdto = new PageDTO(page, total);
-            map.put("xrayList", service.listProcess(pdto));
-            map.put("pv", pdto);
+        long total;
+
+        if (role.equalsIgnoreCase("A") || role.equalsIgnoreCase("ADMIN")) {
+            // ✅ 어드민 → 전체 조회
+            total = service.countProcess();
+            if (total > 0) {
+                pdto = new PageDTO(page, total);
+                map.put("xrayList", service.listProcess(pdto));
+                map.put("pv", pdto);
+            }
+        } else {
+            // ✅ 일반 사용자 → 본인 업로드 내역만 조회
+            total = service.countByUploaderId(uploaderId);
+            if (total > 0) {
+                pdto = new PageDTO(page, total);
+                map.put("xrayList", service.listByUploaderProcess(uploaderId, pdto));
+                map.put("pv", pdto);
+            }
         }
+
+        return ResponseEntity.ok(map);
+    }
+
+    @GetMapping("/listD/{page}")
+    public ResponseEntity<Map<String, Object>> listD(
+            @PathVariable("page") int page,
+            @AuthenticationPrincipal PrincipalDetails principal) {
+
+        String role = principal.getAuthorities().stream()
+                .map(a -> a.getAuthority().replace("ROLE_", "")) // ROLE_ADMIN → ADMIN
+                .findFirst()
+                .orElse("USER");
+        
+
+        String uploaderId = principal.getUsername();  // ✅ 로그인 사용자 ID (xray01)
+
+        log.info("Xray listD 요청: uploaderId={}, role={}", uploaderId, role);
+
+        Map<String, Object> map = new HashMap<>();
+        long total;
+
+        if (role.equalsIgnoreCase("A") || role.equalsIgnoreCase("ADMIN")) {
+            // ✅ 어드민 → 전체 조회
+            total = service.countProcess();
+            if (total > 0) {
+                pdto = new PageDTO(page, total);
+                map.put("xrayList", service.listProcess(pdto));
+                map.put("pv", pdto);
+            }
+        } else {
+            // ✅ 일반 사용자 → 본인 업로드 내역만 조회
+            total = service.countByDoctorId(uploaderId);
+            if (total > 0) {
+                pdto = new PageDTO(page, total);
+                map.put("xrayList", service.listByDoctorProcess(uploaderId, pdto));
+                map.put("pv", pdto);
+            }
+        }
+
         return ResponseEntity.ok(map);
     }
     
+
     @PostMapping("/upload")
     @PreAuthorize("hasAnyRole('ADMIN','XRAY_OPERATOR')")
     public ResponseEntity<String> upload(
