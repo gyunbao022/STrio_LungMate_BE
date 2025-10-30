@@ -122,6 +122,12 @@ public class XrayImageServiceImpl implements XrayImageService {
     public long countByUploaderId(String uploaderId) {
         return repository.countByUploaderId(uploaderId);
     }
+    
+    @Transactional
+    @Override
+    public long countByDoctorId(String doctorId) {
+        return repository.countByDoctorId(doctorId);
+    }    
 
     @Transactional
     @Override
@@ -131,4 +137,14 @@ public class XrayImageServiceImpl implements XrayImageService {
                          .map(XrayImageDTO::toDTO)
                          .collect(Collectors.toList());
     }    
+    
+    @Transactional
+    @Override
+    public List<XrayImageDTO> listByDoctorProcess(String doctorId, PageDTO pv) {
+        return repository.findPagedByDoctorId(doctorId, pv)
+                         .stream()
+                         .map(XrayImageDTO::toDTO)
+                         .collect(Collectors.toList());
+    }  
+    
 }
