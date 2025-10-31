@@ -25,7 +25,7 @@ public interface DiagnosisService {
     List<DiagnosisDTO> findByXrayId(long xrayId);
 
     // 스프링→파이썬→DB upsert→프론트 반환
-    Map<String, Object> analyzeByXrayId(long xrayId, Double threshold);
+    Map<String, Object> analyzeByXrayId(long xrayId, Double threshold, String doctorId);
 
     // 저장된 최신 결과 조회(프론트 스키마)
     Map<String, Object> latestResultView(long xrayId);
