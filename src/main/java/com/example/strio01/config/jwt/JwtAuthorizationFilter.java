@@ -107,6 +107,7 @@ public class JwtAuthorizationFilter extends BasicAuthenticationFilter {
         return switch (cd) {
             case "A" -> "ROLE_ADMIN";
             case "D" -> "ROLE_DOCTOR";
+            case "X" -> "ROLE_XRAY_OPERATOR";
             default -> "ROLE_USER";
         };
     }
